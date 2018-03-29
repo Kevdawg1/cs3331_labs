@@ -3,7 +3,7 @@ import threading
 import codecs
 
 bind_ip = "127.0.0.1"
-bind_port = 9997
+bind_port = 9999
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -19,8 +19,20 @@ def handle_client (client_socket):
 	request_method = request.split(' ')[0]
 	if (request_method == 'GET'):
 		file_requested = request.split(' ')[1]
-	# if ((file_requested == '/') or (file_requested == '/index.html')):
+	if ((file_requested == '/') or (file_requested == '/index.html')):
 		file_requested = 'index.html'
+	else: file_requested = file_requested.split('/')[1]
+	try:
+		if (file_requested.split('.')[1] == 'png'):
+			file_handler = open(file_requested,'rb')
+			server_response = "HTTP/1.1 200 OK \n\n".encode()
+			client_socket.send(server_response + file_handler.read())
+			file_handler.close()
+			return
+	except Exception as e:
+		print("Warning file not found. Serving response code 404")
+		if (request_method == 'GET'):
+			response_content = b"<html><body><p>Error 404: File not found</p><p>Python HTTP server</p></body></html>"
 	# file_requested = 'www' + file_requested
 	print ("[*] Serving web page: %s" % file_requested)
 	try:
@@ -32,9 +44,10 @@ def handle_client (client_socket):
 		print("Warning file not found. Serving response code 404")
 		if (request_method == 'GET'):
 			response_content = b"<html><body><p>Error 404: File not found</p><p>Python HTTP server</p></body></html>"
-	server_response = request.encode()
+	server_response = "HTTP/1.1 200 OK \n\n".encode()
 	if (request_method == 'GET'):
 		server_response += response_content
+	response_content = response_content.encode()
 	client_socket.send(server_response)
 	# f=codecs.open("index.html", 'r')
 	# client_socket.sendall(f.read())
