@@ -19,7 +19,7 @@ def handle_client (client_socket):
 	request_method = request.split(' ')[0]
 	if (request_method == 'GET'):
 		file_requested = request.split(' ')[1]
-	# if ((file_requested == '/') or (file_requested == '/index.html')):
+	if ((file_requested == '/') or (file_requested == '/index.html')):
 		file_requested = 'index.html'
 	# file_requested = 'www' + file_requested
 	print ("[*] Serving web page: %s" % file_requested)
@@ -35,7 +35,7 @@ def handle_client (client_socket):
 	server_response = request.encode()
 	if (request_method == 'GET'):
 		server_response += response_content
-	client_socket.send(server_response)
+	client_socket.send(response_content)
 	# f=codecs.open("index.html", 'r')
 	# client_socket.sendall(f.read())
 	client_socket.close()
