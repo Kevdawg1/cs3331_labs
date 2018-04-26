@@ -1,5 +1,6 @@
 import time
 import socket 
+import thread
 import threading
 import pickle
 import sys
@@ -17,6 +18,7 @@ peer_port_num = 50000 + int(peer_id)
 bind_ip = "127.0.0.1"
 
 server.bind((bind_ip,peer_port_num))
+# server.listen(1)
 # server.sendto(peer_id, (bind_ip,peer_successor_first))
 print("Listening...")
 
@@ -26,6 +28,7 @@ def request_file(request):
 
 	origin_port = int(request.split(' ')[2])					# recovers the port first requested from
 	if (peer_port_num != origin_port):
+		print("entered")
 		response_sock.connect((bind_ip, origin_port))		# connects to peer from origin port
 
 	if (hashed <= peer_successor_first):
@@ -35,10 +38,9 @@ def request_file(request):
 			response_message = "A response message, destined for peer %s, has been sent" % filename
 			print(response_message)
 			response_message = filename + "," + peer_id
-			response_sock.send()
+			response_sock.send(response_message)
 			# it is stored in this peer
 		elif (hashed == peer_successor_first):
-			print("entered------------")
 			server.sendto(request,(bind_ip,peer_successor_first_port))
 			# it is stored in the next peer
 	elif (hashed <= peer_successor_second):
@@ -54,35 +56,48 @@ def request_file(request):
 
 def handle_request(request):
 	tcp_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	print(request)
 	request_file(request)
 	print('Now hosting TCP server....')
 	print('Listening for peer response....')
 	tcp_server.bind((bind_ip,peer_port_num))
-	tcp_server.listen(1)
 	conn,addr = tcp_server.accept()
 	print("Connection address:", addr)
 	data = conn.recv(1024)
 	filename, peer = data.split(",")
 	print("Received a response message from peer %s, which has the file %s." % (peer,filename))
 	conn.close()
+	request_thread.exit()
 
-while True:
+def pinging(server):
+	data, addr = server.recvfrom(1024)
+	data1 = data.split(" ")
+	if (len(data1) > 1):
+		print ("A ping request was received from Peer %s" % data)
+		request_file(data)
+
+def request_listen():
 	i = raw_input("Enter your request:")
 	if not i:
-		continue
+		return
 	print (i)
 	# i = ""
 	input_message = i.split(" ")
-	print(input_message)
 	if (input_message[0] == "request"):
 		if (len(input_message) == 2):
 			i = i + " " + str(peer_port_num)
 			handle_request(i)
 		else:
 			request_file(i)
+	else:
+		print ("A ping request was received from Peer %s" % input_message)
+
+while True:
 	try: 
-		data, addr = server.recvfrom(1024)
-		print ("A ping request was received from Peer %s" % data)
+		thread.start_new_thread(pinging, (server,))
+		request_thread = threading.Thread(target=request_listen, args=())
+		request_thread.start()
+		# thread.start_new_thread(request_listen,())
 	except:
 		continue
 
