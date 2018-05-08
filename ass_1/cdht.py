@@ -6,7 +6,7 @@ import pickle
 import sys
 
 server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-response_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
 
 peer_id = sys.argv[1]
 peer_successor_first = int(sys.argv[2])
@@ -15,7 +15,8 @@ peer_successor_second = int(sys.argv[3])
 peer_successor_second_port = peer_successor_second + 50000
 # print (peer_id)
 peer_port_num = 50000 + int(peer_id)
-bind_ip = "127.0.0.1"
+bind_ip = '127.0.0.1'
+tcp_ip = '127.0.0.2'
 
 server.bind((bind_ip,peer_port_num))
 # server.listen(1)
@@ -27,9 +28,9 @@ def request_file(request):
 	hashed = int(filename) % 256							# filename is hashed to find peer id responsible
 
 	origin_port = int(request.split(' ')[2])					# recovers the port first requested from
-	if (peer_port_num != origin_port):
-		print("entered")
-		response_sock.connect((bind_ip, origin_port))		# connects to peer from origin port
+	#if (peer_port_num != origin_port):
+	#	print("entered")
+	#  response_sock.connect((bind_ip, origin_port))		# connects to peer from origin port
 
 	if (hashed <= peer_successor_first):
 		if (hashed <= peer_id and origin_port != peer_port_num):
@@ -38,7 +39,13 @@ def request_file(request):
 			response_message = "A response message, destined for peer %s, has been sent" % filename
 			print(response_message)
 			response_message = filename + "," + peer_id
+			print(origin_port)
+			print(tcp_ip)
+			response_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			response_sock.connect((bind_ip, origin_port))
 			response_sock.send(response_message)
+			data = response_sock.recv(1024)
+			response_sock.close()
 			# it is stored in this peer
 		elif (hashed == peer_successor_first):
 			server.sendto(request,(bind_ip,peer_successor_first_port))
@@ -56,18 +63,19 @@ def request_file(request):
 
 def handle_request(request):
 	tcp_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#	tcp_.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
 	print(request)
 	request_file(request)
 	print('Now hosting TCP server....')
 	print('Listening for peer response....')
 	tcp_server.bind((bind_ip,peer_port_num))
+	tcp_server.listen(10)
 	conn,addr = tcp_server.accept()
 	print("Connection address:", addr)
 	data = conn.recv(1024)
 	filename, peer = data.split(",")
 	print("Received a response message from peer %s, which has the file %s." % (peer,filename))
 	conn.close()
-	request_thread.exit()
 
 def pinging(server):
 	data, addr = server.recvfrom(1024)
