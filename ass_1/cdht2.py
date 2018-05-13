@@ -4,39 +4,40 @@ import thread
 import threading
 import pickle
 import sys
+import signal
 
 udp_server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 class Connection:
-   	def __init__(self, origin_port):
+	def __init__(self, origin_port):
 		self._origin_port = origin_port
 		self._message_type = ""
 		self._filename = ""
 		self._quit_first_successor = ""
 		self._quit_second_successor = ""
-   	@property
-   	def origin_port(self):
-   		return self._origin_port
-   	@property
-   	def message_type(self):
-   		return self._message_type
-   	@property
-   	def filename(self):
-   		return self._filename
-   	@property
-   	def quit_first_successor(self):
-   		return self._quit_first_successor
-   	@property
-   	def quit_second_successor(self):
-   		return self._quit_second_successor
-   	def set_message_type(self, message_type):
-   		self._message_type = message_type
-   	def set_filename(self,filename):
-   		self._filename = filename
+	@property
+	def origin_port(self):
+		return self._origin_port
+	@property
+	def message_type(self):
+		return self._message_type
+	@property
+	def filename(self):
+		return self._filename
+	@property
+	def quit_first_successor(self):
+		return self._quit_first_successor
+	@property
+	def quit_second_successor(self):
+		return self._quit_second_successor
+	def set_message_type(self, message_type):
+		self._message_type = message_type
+	def set_filename(self,filename):
+		self._filename = filename
 	def set_quit_first_successor(self,quit_first_successor):
-   		self._quit_first_successor = quit_first_successor
-   	def set_quit_second_successor(self,quit_second_successor):
-   		self._quit_second_successor = quit_second_successor	
+		self._quit_first_successor = quit_first_successor
+	def set_quit_second_successor(self,quit_second_successor):
+		self._quit_second_successor = quit_second_successor	
 peer_id = sys.argv[1]
 peer_successor_first = int(sys.argv[2])
 peer_successor_first_port = peer_successor_first + 50000
@@ -45,6 +46,15 @@ peer_successor_second_port = peer_successor_second + 50000
 # print (peer_id)
 peer_port_num = 50000 + int(peer_id)
 bind_ip = '127.0.0.1'
+
+def signal_handler(signal, frame):
+	conn_data = Connection(peer_port_num)
+	conn_data.set_message_type("kill")
+	conn_data.set_quit_first_successor(peer_successor_first)
+	conn_data.set_quit_second_successor(peer_successor_second)
+	peer_leave(conn_data)
+	sys.exit(0)
+signal.signal(signal.SIGINT, signal_handler)
 
 udp_server.bind((bind_ip,peer_port_num))
 # tcp_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -73,7 +83,7 @@ def request_file(conn_data):
 		if (hashed <= peer_id and origin_port != peer_port_num):
 			response_message = "File %s is here." % filename
 			print(response_message)
-			response_message = "A response message, destined for peer %s, has been sent" % filename
+			response_message = "A response message, destined for peer %s, has been sent." % filename
 			print(response_message)
 			response_message = filename + "," + peer_id
 			print(origin_port)
@@ -118,10 +128,10 @@ def pinging(udp_server):
 		request_file(conn_data)
 	elif (conn_data.message_type == "connection"):
 		respondConnection(conn_data)
-	elif(conn_data.message_type == "quit"):
+	elif(conn_data.message_type == "quit" or conn_data.message_type == "kill"):
 		peer_leave(conn_data)
 	else: 
-		print ("A ping request was received from Peer %s" % data)
+		print ("A ping request was received from Peer %s." % data)
 
 def respondConnection(conn_data):
 	resp_data = Connection(peer_port_num)
@@ -145,13 +155,17 @@ def peer_leave(conn_data):
 			peer_successor_first_port = peer_successor_first + 50000
 			peer_successor_second = conn_data.quit_second_successor
 			peer_successor_second_port = peer_successor_second + 50000
-			# print("new first successor: ",peer_successor_first)
-			# print("new second successor: ",peer_successor_second)
+			if (conn_data.message_type == "quit"):
+				print("Peer " + str(conn_data.origin_port-50000) + " will depart from the network.")
+			elif (conn_data.message_type == "kill"):
+				print("Peer " + str(conn_data.origin_port-50000) + " is no longer alive.")
+			print("My first successor is now peer " + str(peer_successor_first) + ".")
+			print("My second successor is now peer " + str(peer_successor_second) + ".")
 			return
 		elif (peer_successor_second_port == conn_data.origin_port):
 			peer_successor_second = conn_data.quit_second_successor
 			peer_successor_second_port = conn_data.quit_second_successor + 50000
-			# print("new second successor: ",peer_successor_second)
+			print("My second successor is now peer " + str(peer_successor_second) + ".")
 		quit_message = pickle.dumps(conn_data)
 		udp_server.sendto(quit_message,(bind_ip,peer_successor_first_port))
 
@@ -184,86 +198,3 @@ while True:
 		# thread.start_new_thread(request_listen,())
 	except:
 		continue
-
-'''
-server.listen(5)
-print('Listening...')
-
-peer_list = []
-
-def create_peer_list(dictionary_list, hostname, port):
-	keys = ['Hostname', 'Port Number']
-
-	entry = [hostname, str(port)]
-	dictionary_list.insert(0, dict(zip(keys, entry)))
-	return dictionary_list, keys
-
-def create_rfc_list(dictionary_list, dict_list_of_rfcs, hostname):
-	keys = ['RFC Number', 'RFC Title', 'Hostname']
-
-	for rfc in dict_list_of_rfcs:
-		rfc_number = rfc['RFC Number']
-		rfc_title = rfc['RFC Title']
-		entry = [str(rfc_number), rfc_title, hostname]
-		dictionary_list.insert(0, dict(zip(keys, entry)))
-
-	return dictionary_list, keys
-
-def create_combined_list(dictionary_list, dict_list_of_rfcs, hostname, port):
-	keys = ['RFC Number', 'RFC Title', 'Hostname', 'Port Number']
-	for rfc in dict_list_of_rfcs:
-		rfc_number = rfc['RFC Number']
-		rfc_title = rfc['RFC Title']
-		entry = [str(rfc_number), rfc_title, hostname, str(port)]
-		dictionary_list.insert(0, dict(zip(keys, entry)))
-	return dictionary_list, keys
-
-def handle_client(client_socket,addr):
-	client_socket.send(bytes('Thank you for connecting', 'utf-8'))
-	print('Got connection from ', addr)
-	data = pickle.loads(conn.recv(1024))  # receive the[upload_port_num, rfcs_num, rfcs_title]
-	my_port = data[0]
-	my_port = data[0]
-	# Generate the peer list and RFC list
-	peer_list, peer_keys = create_peer_list(peer_list, addr[0], data[0])  # change addr[1] to data[0]
-	RFC_list, rfc_keys = create_rfc_list(RFC_list, data[1], addr[0])
-	combined_list, combined_keys = create_combined_list(combined_list, data[1], addr[0], data[0])
-
-	while True:
-		data = pickle.loads(conn.recv(1024))  # receive the[upload_port_num, rfcs_num, rfcs_title]
-		if data == "EXIT":
-			break
-		if type(data) == str:
-			p2s_list_response(conn)
-			new_data = pickle.dumps(return_dict())
-			conn.send(new_data)
-		else:
-			if data[0][0] == "A":
-				 p2s_add_response(conn, data[1], data[4], addr[0], data[3])  # Put server response message here
-				 RFC_list = append_to_rfc_list(RFC_list, data[1], data[4], addr[0])
-				 combined_list = append_to_combined_list(combined_list, data[1], data[4], addr[0], my_port)
-				 print_dictionary(RFC_list, rfc_keys)
-			if data[2] == "0":
-				new_data = pickle.dumps(p2s_lookup_response(data[1]))
-				conn.send(new_data)
-			elif data[2] == "1":
-				print(p2s_lookup_response2(data[1]))
-				new_data = pickle.dumps(p2s_lookup_response2(data[1]))
-				conn.send(new_data)
-	# Remove the client's info from the dictionaries
-	peer_list = delete_peers_dictionary(peer_list, addr[0])
-	RFC_list = delete_rfcs_dictionary(RFC_list, addr[0])
-	combined_list = delete_combined_dictionary(combined_list, addr[0])
-	#print_dictionary(peer_list, peer_keys)
-	#print_dictionary(RFC_list, rfc_keys)
-	#print_dictionary(combined_list, combined_keys)
-	conn.close()
-
-while True:
-	global users
-	client, addr = server.accept()
-	print ("[*] Accepted connection from %s:%d" % (addr[0],addr[1]))
-	if (len(users) < 10):
-		client_handler = threading.Thread(target=handle_client, args=(client,addr))
-		client_handler.start()
-'''
