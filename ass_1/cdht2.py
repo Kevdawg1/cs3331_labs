@@ -81,6 +81,7 @@ def request_file(conn_data):
 		udp_server.sendto(message,(bind_ip,peer_successor_second_port))
 	if (hashed <= peer_successor_first or hashed <= peer_id):
 		if (hashed <= peer_id and origin_port != peer_port_num):
+			print ('')
 			response_message = "File %s is here." % filename
 			print(response_message)
 			response_message = "A response message, destined for peer %s, has been sent." % filename
@@ -93,12 +94,12 @@ def request_file(conn_data):
 			conn_data = response_sock.recv(1024)
 			response_sock.close()
 			# it is stored in this peer
-		elif (hashed == peer_successor_first):
+		elif (hashed <= peer_successor_first):
 			message = pickle.dumps(conn_data)
 			udp_server.sendto(message,(bind_ip,peer_successor_first_port))
 			# it is stored in the next peer
-	
 	else:
+		print ('')
 		response_message = "File %s is not stored here." % filename
 		print(response_message)
 		response_message = "File request message for %s has been sent to my successor." % filename
@@ -118,6 +119,7 @@ def handle_request(conn_data):
 	conn,addr = tcp_server.accept()
 	data = conn.recv(1024)
 	filename, peer = data.split(",")
+	print ('')
 	print("Received a response message from peer %s, which has the file %s." % (peer,filename))
 	conn.close()
 
@@ -156,8 +158,10 @@ def peer_leave(conn_data):
 			peer_successor_second = conn_data.quit_second_successor
 			peer_successor_second_port = peer_successor_second + 50000
 			if (conn_data.message_type == "quit"):
+				print ('')
 				print("Peer " + str(conn_data.origin_port-50000) + " will depart from the network.")
 			elif (conn_data.message_type == "kill"):
+				print ('')
 				print("Peer " + str(conn_data.origin_port-50000) + " is no longer alive.")
 			print("My first successor is now peer " + str(peer_successor_first) + ".")
 			print("My second successor is now peer " + str(peer_successor_second) + ".")
@@ -188,6 +192,7 @@ def request_listen():
 		conn_data.set_quit_second_successor(peer_successor_second)
 		peer_leave(conn_data)
 	else:
+		print ('')
 		print ("A ping request was received from Peer %s" % input_message)
 
 while True:
