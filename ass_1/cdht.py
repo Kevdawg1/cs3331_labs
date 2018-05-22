@@ -118,39 +118,38 @@ tcp_client2.setblocking(0)
 # data = conn.recv(1024)
 # udp_server.listen(1)
 # udp_server.sendto(peer_id, (bind_ip,peer_successor_first))
-# def udp_listen():
-# 	global pings
-# 	data, addr = udp_server.recvfrom(1024)
-# 	if (data != "approved"):
-# 		print ("A ping request was received from Peer %s." % data)
-# 		pings += 1
-# 		port = int(data) + 50000
-# 		udp_server.sendto("approved", (bind_ip,port))
+def udp_listen():
+	global pings
+	data, addr = udp_server.recvfrom(1024)
+	if (data != "approved"):
+		print ("A ping request was received from Peer %s." % data)
+		pings += 1
+		port = int(data) + 50000
+		udp_server.sendto("approved", (bind_ip,port))
 
-# def ping_first_peer():
-# 	global pings
-# 	udp_server.sendto(peer_id,(bind_ip, peer_successor_first_port))
-# 	data, addr = udp_server.recvfrom(1024)
-# 	ping_count[0] = 1
+def ping_first_peer():
+	global pings
+	udp_server.sendto(str(peer_id),(bind_ip, peer_successor_first_port))
+	data, addr = udp_server.recvfrom(1024)
+	ping_count[0] = 1
 
-# def ping_second_peer():
-# 	global pings
-# 	udp_server.sendto(peer_id,(bind_ip, peer_successor_second_port))
-# 	data, addr = udp_server.recvfrom(1024)
-# 	ping_count[1] = 1
+def ping_second_peer():
+	global pings
+	udp_server.sendto(str(peer_id),(bind_ip, peer_successor_second_port))
+	data, addr = udp_server.recvfrom(1024)
+	ping_count[1] = 1
 
-# ping_count = [0, 0]
-# pings = 0
-# while (pings < 2):
-# 	try:
-# 		thread.start_new_thread(udp_listen, ())
-# 		if (ping_count[0] == 0):
-# 			thread.start_new_thread(ping_first_peer, ())
-# 		if (ping_count[1] == 0):
-# 			thread.start_new_thread(ping_second_peer, ())
-# 	except:
-# 		continue
-print("Listening...")
+ping_count = [0, 0]
+pings = 0
+while (pings < 2):
+	try:
+		thread.start_new_thread(udp_listen, ())
+		if (ping_count[0] == 0):
+			thread.start_new_thread(ping_first_peer, ())
+		if (ping_count[1] == 0):
+			thread.start_new_thread(ping_second_peer, ())
+	except:
+		continue
 
 
 def request_file(conn_data):
