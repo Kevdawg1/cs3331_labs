@@ -166,10 +166,11 @@ def request_file(conn_data):
 		message = pickle.dumps(conn_data)
 		response_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		response_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
-		response_sock.connect((bind_ip, peer_successor_second_port))
+		response_sock.connect((bind_ip, peer_successor_first_port))
 		response_sock.send(message)
 		return
-	if (hashed == peer_id or (hashed > conn_data.quit_second_successor and hashed <= peer_id)):
+	if (hashed == peer_id or 
+		((conn_data.quit_first_successor == peer_id or conn_data.quit_second_successor == peer_id) and hashed <= peer_id)):
 		# it is stored in this peer
 		print ('')
 		response_message = "File %s is here." % filename
